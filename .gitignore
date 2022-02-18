@@ -5,3 +5,7 @@
 xcuserdata/
 DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.swiftpm/xcode/xcshareddata/xcschemes/jenkins_version_change_log-Package.xcscheme
+.swiftpm/xcode/xcshareddata/xcschemes/jenkins_version_change_log.xcscheme
+.swiftpm/xcode/xcshareddata/xcschemes/jvcl.xcscheme
+Package.resolved
