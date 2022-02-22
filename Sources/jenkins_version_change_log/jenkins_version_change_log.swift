@@ -16,8 +16,7 @@ struct JVCL: ParsableCommand {
         let mode = try getEnvironment(name: "MODE")
         /// 获取打包版本
         let version = try getEnvironment(name: "BUILD_NAME")
-        /// 获取打包的 Git 提交
-        let gitCommit = try getEnvironment(name: "GIT_COMMIT")
+
         /// 获取构建的分支
         let branch = try getEnvironment(name: "BRANCH")
         
@@ -27,29 +26,44 @@ struct JVCL: ParsableCommand {
             print("BUILD_ID 不是整数")
             throw ExitCode.failure
         }
-        var jobDetail:JobDetail?
-        var jobs:[JobDetail] = []
-        while id > 0 {
-            defer {
-                id -= 1
+        
+        if let commit = ProcessInfo.processInfo.environment["LAST_BUILD_COMMIT"] {
+            try loadGitLog(lastBuildCommit: commit)
+        } else {
+            var jobDetail:JobDetail?
+            var jobs:[JobDetail] = []
+            let minId = id - 20;
+            while id > 0 {
+                defer {
+                    id -= 1
+                }
+                guard id >= minId else {
+                    break
+                }
+                guard let detail = try getJobDetail(buildId: id) else {
+                    continue
+                }
+                jobs.append(detail)
+                guard detail.isSuccess else {continue}
+                guard branch == detail.branch else {continue}
+                guard mode == detail.model else {continue}
+                guard version >= detail.version else {continue}
+                jobDetail = detail
+                break
             }
-            guard let detail = try getJobDetail(buildId: id) else {
-                continue
+            guard let jobDetail = jobDetail else {
+                return
             }
-            jobs.append(detail)
-            guard detail.isSuccess else {continue}
-            guard branch == detail.branch else {continue}
-            guard mode == detail.model else {continue}
-            guard version >= detail.version else {continue}
-            jobDetail = detail
-            break
+            try loadGitLog(lastBuildCommit: jobDetail.gitCommit)
         }
-        guard let jobDetail = jobDetail else {
-            return
-        }
+    }
+    
+    func loadGitLog(lastBuildCommit:String) throws {
         let workspace = try getEnvironment(name: "WORKSPACE")
         SwiftShell.main.currentdirectory = workspace
-        let command = runAsync("git", "log", "\(jobDetail.gitCommit)..\(gitCommit)")
+        /// 获取打包的 Git 提交
+        let gitCommit = try getEnvironment(name: "GIT_COMMIT")
+        let command = runAsync("git", "log", "\(lastBuildCommit)..\(gitCommit)")
         try command.finish()
         let commandStdio = command.stdout.read()
         var logContent:String = ""
