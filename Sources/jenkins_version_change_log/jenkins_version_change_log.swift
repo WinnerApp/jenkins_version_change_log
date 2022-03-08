@@ -77,7 +77,7 @@ struct JVCL: ParsableCommand {
         guard logContent.isEmpty else {
             throw ExitCode.failure
         }
-        try runAndPrint("export", "CHANGE_LOG=\(logContent)")
+        try runAndPrint("export", "GIT_LOG=\(logContent)")
     }
 
     private func getEnvironment(name:String) throws -> String {
