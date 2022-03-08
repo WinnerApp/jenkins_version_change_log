@@ -74,7 +74,7 @@ struct JVCL: ParsableCommand {
             
             """
         }
-        guard logContent.isEmpty else {
+        guard !logContent.isEmpty else {
             throw ExitCode.failure
         }
         try runAndPrint("export", "GIT_LOG=\(logContent)")
