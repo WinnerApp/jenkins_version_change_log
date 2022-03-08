@@ -77,7 +77,14 @@ struct JVCL: ParsableCommand {
         guard !logContent.isEmpty else {
             throw ExitCode.failure
         }
-        try runAndPrint("export", "GIT_LOG=\(logContent)")
+        guard let data = logContent.data(using: .utf8) else {
+            throw ExitCode.failure
+        }
+        let pwd = try getEnvironment(name: "PWD")
+        print(pwd)
+        FileManager.default.createFile(atPath: "\(pwd)/git.log",
+                                           contents: data,
+                                           attributes: nil)
     }
 
     private func getEnvironment(name:String) throws -> String {
