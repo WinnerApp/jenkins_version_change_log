@@ -10,6 +10,7 @@ struct JVCL: ParsableCommand {
         /// 获取是否有自定义的changeLog 不为空就不用获取了
         if let changelog = ProcessInfo.processInfo.environment["CHANGE_LOG"],
             !changelog.isEmpty {
+            try saveLogToFile(logContent: changelog)
             return
         }
         /// 获取打包类型
@@ -74,6 +75,10 @@ struct JVCL: ParsableCommand {
             
             """
         }
+        try saveLogToFile(logContent: logContent)
+    }
+    
+    func saveLogToFile(logContent:String) throws {
         guard !logContent.isEmpty else {
             throw ExitCode.failure
         }
