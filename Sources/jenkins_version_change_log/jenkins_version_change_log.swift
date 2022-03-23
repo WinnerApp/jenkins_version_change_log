@@ -7,19 +7,18 @@ import SwiftyJSON
 @main
 struct JVCL: ParsableCommand {
     func run() throws {
+        /// 获取构建的分支
+        let branch = try getEnvironment(name: "BRANCH")
         /// 获取是否有自定义的changeLog 不为空就不用获取了
-        if let changelog = ProcessInfo.processInfo.environment["CHANGE_LOG"],
+        if let changelog = ProcessInfo.processInfo.environment["GIT_LOG"],
             !changelog.isEmpty {
-            try saveLogToFile(logContent: changelog)
+            try saveLogToFile(logContent: changelog, branch: branch)
             return
         }
         /// 获取打包类型
         let mode = try getEnvironment(name: "MODE")
         /// 获取打包版本
         let version = try getEnvironment(name: "BUILD_NAME")
-
-        /// 获取构建的分支
-        let branch = try getEnvironment(name: "BRANCH")
         
         /// 获取当前 build ID
         let buildId = try getEnvironment(name: "BUILD_ID")
@@ -29,7 +28,7 @@ struct JVCL: ParsableCommand {
         }
         
         if let commit = ProcessInfo.processInfo.environment["LAST_BUILD_COMMIT"] {
-            try loadGitLog(lastBuildCommit: commit)
+            try loadGitLog(lastBuildCommit: commit, branch: branch)
         } else {
             var jobDetail:JobDetail?
             var jobs:[JobDetail] = []
@@ -55,11 +54,11 @@ struct JVCL: ParsableCommand {
             guard let jobDetail = jobDetail else {
                 return
             }
-            try loadGitLog(lastBuildCommit: jobDetail.gitCommit)
+            try loadGitLog(lastBuildCommit: jobDetail.gitCommit, branch: branch)
         }
     }
     
-    func loadGitLog(lastBuildCommit:String) throws {
+    func loadGitLog(lastBuildCommit:String, branch:String) throws {
         let workspace = try getEnvironment(name: "WORKSPACE")
         SwiftShell.main.currentdirectory = workspace
         /// 获取打包的 Git 提交
@@ -75,21 +74,40 @@ struct JVCL: ParsableCommand {
             
             """
         }
-        try saveLogToFile(logContent: logContent)
+        try saveLogToFile(logContent: logContent, branch: branch)
     }
     
-    func saveLogToFile(logContent:String) throws {
+    func saveLogToFile(logContent:String, branch:String) throws {
+        var logContent = logContent
         guard !logContent.isEmpty else {
             throw ExitCode.failure
+        }
+        if !branch.isEmpty {
+            logContent = """
+            代码分支: \(branch)
+            
+            \(logContent)
+            """
         }
         guard let data = logContent.data(using: .utf8) else {
             throw ExitCode.failure
         }
         let pwd = try getEnvironment(name: "PWD")
+        let logFile = "\(pwd)/git.log"
+        var isDirectory = ObjCBool(false)
+        if FileManager.default.fileExists(atPath: logFile,
+                                          isDirectory: &isDirectory),
+           !isDirectory.boolValue {
+            /// 删除之前的文件
+            try FileManager.default.removeItem(atPath: logFile)
+        }
         print(pwd)
-        FileManager.default.createFile(atPath: "\(pwd)/git.log",
-                                           contents: data,
-                                           attributes: nil)
+        guard FileManager.default.createFile(atPath: "\(pwd)/git.log",
+                                             contents: data,
+                                             attributes: nil) else {
+            print("创建git.log失败")
+            throw ExitCode.failure
+        }
     }
 
     private func getEnvironment(name:String) throws -> String {
