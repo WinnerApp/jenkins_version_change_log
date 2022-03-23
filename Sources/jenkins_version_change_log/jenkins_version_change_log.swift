@@ -98,11 +98,12 @@ struct JVCL: ParsableCommand {
         if FileManager.default.fileExists(atPath: logFile,
                                           isDirectory: &isDirectory),
            !isDirectory.boolValue {
+            print("\(logFile)已经存在，删除之前的旧日志")
             /// 删除之前的文件
             try FileManager.default.removeItem(atPath: logFile)
         }
         print(pwd)
-        guard FileManager.default.createFile(atPath: "\(pwd)/git.log",
+        guard FileManager.default.createFile(atPath: logFile,
                                              contents: data,
                                              attributes: nil) else {
             print("创建git.log失败")
