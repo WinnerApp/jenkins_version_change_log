@@ -32,7 +32,7 @@ struct JVCL: ParsableCommand {
         } else {
             var jobDetail:JobDetail?
             var jobs:[JobDetail] = []
-            let minId = id - 20;
+            let minId = id
             while id > 0 {
                 defer {
                     id -= 1
@@ -89,6 +89,7 @@ struct JVCL: ParsableCommand {
             \(logContent)
             """
         }
+        print(logContent)
         guard let data = logContent.data(using: .utf8) else {
             throw ExitCode.failure
         }
