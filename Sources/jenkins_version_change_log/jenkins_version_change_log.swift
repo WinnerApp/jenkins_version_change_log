@@ -32,12 +32,11 @@ struct JVCL: ParsableCommand {
         } else {
             var jobDetail:JobDetail?
             var jobs:[JobDetail] = []
-            let minId = id
             while id > 0 {
                 defer {
                     id -= 1
                 }
-                guard id >= minId else {
+                guard id >= 0 else {
                     break
                 }
                 guard let detail = try getJobDetail(buildId: id) else {
@@ -52,6 +51,12 @@ struct JVCL: ParsableCommand {
                 break
             }
             guard let jobDetail = jobDetail else {
+                let tip = """
+                无法获取到当前分支的日志
+                可能因为当前分支之前未发布过安装包
+                请尝试打包填写自定义日志或者填写当前分支拉取的节点commit来修复
+                """
+                try saveLogToFile(logContent: tip, branch: branch)
                 return
             }
             try loadGitLog(lastBuildCommit: jobDetail.gitCommit, branch: branch)
