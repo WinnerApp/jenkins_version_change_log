@@ -9,12 +9,6 @@ struct JVCL: ParsableCommand {
     func run() throws {
         /// 获取构建的分支
         let branch = try getEnvironment(name: "BRANCH")
-        /// 获取是否有自定义的changeLog 不为空就不用获取了
-        if let changelog = ProcessInfo.processInfo.environment["GIT_LOG"],
-            !changelog.isEmpty {
-            try saveLogToFile(logContent: changelog, branch: branch)
-            return
-        }
         /// 获取打包类型
         let mode = try getEnvironment(name: "MODE")
         /// 获取打包版本
@@ -22,24 +16,24 @@ struct JVCL: ParsableCommand {
         
         /// 获取当前 build ID
         let buildId = try getEnvironment(name: "BUILD_ID")
-        guard var id = UInt(buildId) else {
+        guard let id = UInt(buildId) else {
             print("BUILD_ID 不是整数")
             throw ExitCode.failure
         }
         
         if let commit = ProcessInfo.processInfo.environment["LAST_BUILD_COMMIT"] {
+            /// 如果有设置最后打包节点 则从对应节点获取日志
             try loadGitLog(lastBuildCommit: commit, branch: branch)
         } else {
+            /// 没有设置查找节点就自动查找节点
             var jobDetail:JobDetail?
             var jobs:[JobDetail] = []
-            while id > 0 {
+            var jobId = id - 1
+            while jobId > 0 {
                 defer {
-                    id -= 1
+                    jobId -= 1
                 }
-                guard id >= 0 else {
-                    break
-                }
-                guard let detail = try getJobDetail(buildId: id) else {
+                guard let detail = try getJobDetail(buildId: jobId) else {
                     continue
                 }
                 jobs.append(detail)
@@ -86,6 +80,13 @@ struct JVCL: ParsableCommand {
         var logContent = logContent
         guard !logContent.isEmpty else {
             throw ExitCode.failure
+        }
+        if let customLog = ProcessInfo.processInfo.environment["GIT_LOG"] {
+            /// 如果有自定义日志 则优先展示自定义日志
+            logContent = """
+            \(customLog)
+            \(logContent)
+            """
         }
         if !branch.isEmpty {
             logContent = """
