@@ -95,6 +95,11 @@ struct JVCL: ParsableCommand {
             \(logContent)
             """
         }
+        let mode = try getEnvironment(name: "MODE")
+        if mode == "release" {
+            /// 如果是 release 版本 就用 git_log 作为更新日志 不提示用户代码分支和提交内容
+            logContent = ProcessInfo.processInfo.environment["GIT_LOG"] ?? ""
+        }
         print(logContent)
         guard let data = logContent.data(using: .utf8) else {
             throw ExitCode.failure
