@@ -33,6 +33,7 @@ struct JVCL: ParsableCommand {
                 defer {
                     jobId -= 1
                 }
+                print("read log from job id \(jobId)")
                 guard let detail = try getJobDetail(buildId: jobId) else {
                     continue
                 }
@@ -42,6 +43,7 @@ struct JVCL: ParsableCommand {
                 guard mode == detail.model else {continue}
                 guard version >= detail.version else {continue}
                 jobDetail = detail
+                print("had read log from job id \(jobId)")
                 break
             }
             guard let jobDetail = jobDetail else {
@@ -62,6 +64,7 @@ struct JVCL: ParsableCommand {
         SwiftShell.main.currentdirectory = workspace
         /// 获取打包的 Git 提交
         let gitCommit = try getEnvironment(name: "GIT_COMMIT")
+        print("正在从节点 \(lastBuildCommit)到\(gitCommit) 获取日志")
         let command = runAsync("git", "log", "\(lastBuildCommit)..\(gitCommit)")
         try command.finish()
         let commandStdio = command.stdout.read()
