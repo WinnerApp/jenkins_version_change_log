@@ -74,6 +74,7 @@ struct JVCL: ParsableCommand {
     }
     
     func saveLogToFile(logContent:String, branch:String) throws {
+        print('日志:\(logContent)');
         var logContent = logContent
         guard !logContent.isEmpty else {
             throw ExitCode.failure
