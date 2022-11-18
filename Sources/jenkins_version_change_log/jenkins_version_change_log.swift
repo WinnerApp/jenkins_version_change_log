@@ -33,7 +33,6 @@ struct JVCL: ParsableCommand {
                 defer {
                     jobId -= 1
                 }
-                print("read log from job id \(jobId)")
                 guard let detail = try getJobDetail(buildId: jobId) else {
                     continue
                 }
@@ -43,16 +42,12 @@ struct JVCL: ParsableCommand {
                 guard mode == detail.model else {continue}
                 guard version >= detail.version else {continue}
                 jobDetail = detail
-                print("had read log from job id \(jobId)")
                 break
             }
             guard let jobDetail = jobDetail else {
-                let tip = """
-                无法获取到当前分支的日志
-                可能因为当前分支之前未发布过安装包
-                请尝试打包填写自定义日志或者填写当前分支拉取的节点commit来修复
-                """
-                try saveLogToFile(logContent: tip, branch: branch)
+                let currentDetail = try getJobDetail(buildId: id)
+                let tip = currentDetail?.comments.joined(separator: "\n")
+                try saveLogToFile(logContent: tip ?? "", branch: branch)
                 return
             }
             try loadGitLog(lastBuildCommit: jobDetail.gitCommit, branch: branch)
@@ -64,7 +59,6 @@ struct JVCL: ParsableCommand {
         SwiftShell.main.currentdirectory = workspace
         /// 获取打包的 Git 提交
         let gitCommit = try getEnvironment(name: "GIT_COMMIT")
-        print("正在从节点 \(lastBuildCommit)到\(gitCommit) 获取日志")
         let command = runAsync("git", "log", "\(lastBuildCommit)..\(gitCommit)")
         try command.finish()
         let commandStdio = command.stdout.read()
@@ -160,6 +154,9 @@ struct JVCL: ParsableCommand {
                 var mode:String?
                 var branch:String?
                 var gitCommit:String?
+                let comments:[String] = json["changeSet"]["items"].arrayValue.map { json in
+                    return json["comment"].stringValue
+                };
                 actions.forEach { json in
                     guard let className = json["_class"].string else {return}
                     if className == "hudson.model.ParametersAction" {
@@ -196,7 +193,8 @@ struct JVCL: ParsableCommand {
                                    model: mode,
                                    version: version,
                                    gitCommit: gitCommit,
-                                   isSuccess: isSuccess)
+                                   isSuccess: isSuccess,
+                                   comments: comments)
             }
         semaphore.wait()
         return detail
@@ -221,4 +219,6 @@ struct JobDetail {
     let gitCommit:String
     /// 是否成功
     let isSuccess:Bool
+    /// 提交日志
+    let comments:[String]
 }
